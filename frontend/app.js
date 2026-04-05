@@ -1,5 +1,5 @@
 // ── Config ────────────────────────────────────────────────────────
-const API_URL = "http://127.0.0.1:5000";// Change to your Render URL when deployed
+const API_URL = "https://loansense.onrender.com";// Change to your Render URL when deployed
 
 // ── State ─────────────────────────────────────────────────────────
 const formData = {
