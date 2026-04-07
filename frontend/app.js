@@ -1,5 +1,5 @@
 // ── Config ────────────────────────────────────────────────────────
-const API_URL = "https://loansense.onrender.com";// Change to your Render URL when deployed
+const API_URL = "https://loanpredictor-60xb.onrender.com";// Change to your Render URL when deployed
 
 // ── State ─────────────────────────────────────────────────────────
 const formData = {
