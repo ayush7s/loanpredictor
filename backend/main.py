@@ -6,6 +6,7 @@ from database import get_db, Prediction, Base, engine
 import joblib
 import numpy as np
 from dotenv import load_dotenv
+from database import SessionLocal
 
 # ── Load env variables ─────────────────────────────────────────────
 load_dotenv()
@@ -76,7 +77,7 @@ def predict():
         result = "Approved ✅" if prediction == 1 else "Rejected ❌"
 
         # Save to database
-        db = next(get_db())
+        db = SessionLocal()
         try:
             record = Prediction(
                 gender=str(data["Gender"]),
@@ -111,7 +112,7 @@ def predict():
 # ── History Endpoint ───────────────────────────────────────────────
 @app.route("/history")
 def history():
-    db = next(get_db())
+    db = SessionLocal()
     try:
         records = db.query(Prediction).order_by(
             Prediction.created_at.desc()
