@@ -1,6 +1,9 @@
 // ── Config ────────────────────────────────────────────────────────
-const API_URL = "http://127.0.0.1:5000";// Change to your Render URL when deployed
+const USE_LOCAL = true; // change to false for production
 
+const API_URL = USE_LOCAL
+  ? "http://127.0.0.1:5000"
+  : "https://loanpredictor-60xb.onrender.com";
 // ── State ─────────────────────────────────────────────────────────
 const formData = {
   Gender: 1,
