@@ -98,6 +98,13 @@
             <button class="toggle-btn" data-field="Property_Area" data-value="0">Rural</button>
           </div>
         </div>
+        <div class="form-group full">
+  <label>Select Prediction Model</label>
+  <select id="modelType">
+    <option value="rf">Random Forest (Recommended)</option>
+    <option value="lr">Logistic Regression</option>
+  </select>
+</div>
 
         <!-- Financial Info -->
         <div class="form-group full">
@@ -154,6 +161,7 @@
     <div class="result-card" id="resultCard">
       <div class="result-icon" id="resultIcon"></div>
       <div class="result-text" id="resultText"></div>
+      <div class="model-used" id="modelUsed"></div>
       <div class="confidence-wrap">
         <span class="confidence-label">Confidence</span>
         <div class="confidence-bar">

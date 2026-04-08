@@ -41,13 +41,14 @@ async function predict() {
   if (!loanAmount || loanAmount <= 0)           return showError("Please enter a valid Loan Amount.");
 
   // Build payload
-  const payload = {
-    ...formData,
-    ApplicantIncome:   applicantIncome,
-    CoapplicantIncome: coapplicantIncome,
-    LoanAmount:        loanAmount,
-    Loan_Amount_Term:  loanTerm
-  };
+const payload = {
+  ...formData,
+  model_type: document.getElementById("modelType").value, // ✅ ADD THIS LINE
+  ApplicantIncome: applicantIncome,
+  CoapplicantIncome: coapplicantIncome,
+  LoanAmount: loanAmount,
+  Loan_Amount_Term: loanTerm
+};
 
   // Loading state
   btn.classList.add("loading");
@@ -90,6 +91,15 @@ function showResult(data) {
   card.className = `result-card visible ${isApproved ? "approved" : "rejected"}`;
   icon.textContent = isApproved ? "✅" : "❌";
   text.textContent = isApproved ? "Loan Approved!" : "Loan Rejected";
+  const modelUsed = document.getElementById("modelUsed");
+if (modelUsed && data.model_used) {
+  let modelName = "Unknown";
+
+  if (data.model_used === "rf") modelName = "Random Forest";
+  else if (data.model_used === "lr") modelName = "Logistic Regression";
+
+  modelUsed.textContent = "Model Used: " + modelName;
+}
   pct.textContent  = `${data.confidence}%`;
 
   // Animate bar
