@@ -1,27 +1,26 @@
 import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from sqlalchemy.orm import Session
-from database import get_db, Prediction, Base, engine
+from database import Prediction, Base, engine, SessionLocal
 import joblib
 import numpy as np
 from dotenv import load_dotenv
-from database import SessionLocal
 
-# ── Load env variables ─────────────────────────────────────────────
+# ── Load environment variables ─────────────────────────────────────
 load_dotenv()
 
 # ── Initialize Flask App ───────────────────────────────────────────
 app = Flask(__name__)
 
-# Enable CORS (VERY IMPORTANT for Vercel ↔ Render)
+# ── Enable CORS ────────────────────────────────────────────────────
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # ── Create DB Tables ───────────────────────────────────────────────
 Base.metadata.create_all(bind=engine)
 
-# ── Load ML Model ──────────────────────────────────────────────────
-model = joblib.load("model.pkl")
+# ── Load BOTH models ───────────────────────────────────────────────
+rf_model = joblib.load("rf_model.pkl")
+lr_model = joblib.load("lr_model.pkl")
 
 # ── Root Route ─────────────────────────────────────────────────────
 @app.route("/")
@@ -31,12 +30,11 @@ def root():
 # ── Health Check ───────────────────────────────────────────────────
 @app.route("/health")
 def health():
-    return jsonify({"status": "ok", "model": "loaded"})
+    return jsonify({"status": "ok", "models": ["rf", "lr"]})
 
 # ── Prediction Endpoint ────────────────────────────────────────────
 @app.route("/predict", methods=["POST", "OPTIONS"])
 def predict():
-    # Handle preflight request (CORS)
     if request.method == "OPTIONS":
         return jsonify({"status": "ok"})
 
@@ -45,7 +43,7 @@ def predict():
         if not data:
             return jsonify({"error": "No JSON data received"}), 400
 
-        # Required fields
+        # ── Required fields ─────────────────────────────────────────
         required = [
             "Gender", "Married", "Dependents", "Education",
             "Self_Employed", "ApplicantIncome", "CoapplicantIncome",
@@ -56,27 +54,55 @@ def predict():
             if field not in data:
                 return jsonify({"error": f"Missing field: {field}"}), 400
 
-        # Prepare features
+        # ── Model selection ─────────────────────────────────────────
+        model_type = data.get("model_type", "rf")
+
+        if model_type == "rf":
+            model = rf_model
+        elif model_type == "lr":
+            model = lr_model
+        else:
+            return jsonify({"error": "Invalid model type"}), 400
+
+        # ── Feature Engineering (IMPORTANT) ─────────────────────────
+        applicant_income = float(data["ApplicantIncome"])
+        coapplicant_income = float(data["CoapplicantIncome"])
+        loan_amount = float(data["LoanAmount"])
+        loan_term = float(data["Loan_Amount_Term"])
+
+        total_income = applicant_income + coapplicant_income
+        income_loan_ratio = total_income / (loan_amount + 1)
+        emi = loan_amount / (loan_term + 1)
+
+        # ── Prepare features (MATCH TRAINING ORDER) ─────────────────
         features = np.array([[ 
             float(data["Gender"]),
             float(data["Married"]),
             float(data["Dependents"]),
             float(data["Education"]),
             float(data["Self_Employed"]),
-            float(data["ApplicantIncome"]),
-            float(data["CoapplicantIncome"]),
-            float(data["LoanAmount"]),
-            float(data["Loan_Amount_Term"]),
+            applicant_income,
+            coapplicant_income,
+            loan_amount,
+            loan_term,
             float(data["Credit_History"]),
-            float(data["Property_Area"])
+            float(data["Property_Area"]),
+            total_income,
+            income_loan_ratio,
+            emi
         ]])
 
-        # Prediction
+        # ── Prediction ──────────────────────────────────────────────
         prediction = model.predict(features)[0]
-        confidence = round(float(model.predict_proba(features).max()) * 100, 2)
+
+        if hasattr(model, "predict_proba"):
+            confidence = round(float(model.predict_proba(features).max()) * 100, 2)
+        else:
+            confidence = 100.0
+
         result = "Approved ✅" if prediction == 1 else "Rejected ❌"
 
-        # Save to database
+        # ── Save to Database ────────────────────────────────────────
         db = SessionLocal()
         try:
             record = Prediction(
@@ -85,10 +111,10 @@ def predict():
                 dependents=str(data["Dependents"]),
                 education=str(data["Education"]),
                 self_employed=str(data["Self_Employed"]),
-                applicant_income=float(data["ApplicantIncome"]),
-                coapplicant_income=float(data["CoapplicantIncome"]),
-                loan_amount=float(data["LoanAmount"]),
-                loan_amount_term=float(data["Loan_Amount_Term"]),
+                applicant_income=applicant_income,
+                coapplicant_income=coapplicant_income,
+                loan_amount=loan_amount,
+                loan_amount_term=loan_term,
                 credit_history=float(data["Credit_History"]),
                 property_area=str(data["Property_Area"]),
                 result=result,
@@ -96,16 +122,19 @@ def predict():
             )
             db.add(record)
             db.commit()
+        except Exception as db_error:
+            print("DB ERROR:", db_error)
         finally:
             db.close()
 
         return jsonify({
             "result": result,
-            "confidence": confidence
+            "confidence": confidence,
+            "model_used": model_type
         })
 
     except Exception as e:
-        print("ERROR:", str(e))
+        print("🔥 ERROR:", e)
         return jsonify({"error": str(e)}), 500
 
 
