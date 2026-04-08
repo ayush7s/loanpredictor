@@ -56,9 +56,7 @@ print("\nDataset after encoding:")
 print(df.head())
 
 # Feature engineering
-df['Total_Income']       = df['ApplicantIncome'] + df['CoapplicantIncome']
-df['Income_Loan_Ratio']  = df['Total_Income'] / (df['LoanAmount'] + 1)
-df['EMI']                = df['LoanAmount'] / (df['Loan_Amount_Term'] + 1)
+
 
 print("\nNew features added:")
 print("  - Total_Income = ApplicantIncome + CoapplicantIncome")
@@ -159,17 +157,19 @@ for feat, imp in importances.items():
     bar = "█" * int(imp * 50)
     print(f"  {feat:<25} {bar} {imp:.4f}")
 
-# ── 6. SAVE BEST MODEL ────────────────────────────────────────────
-print("\n[6] SAVING BEST MODEL")
+# ── 6. SAVE MODELS ────────────────────────────────────────────
+print("\n[6] SAVING MODELS")
 print("-" * 40)
-joblib.dump(best_model, 'model.pkl')
-print(f"  {best_name} saved as model.pkl")
 
-# Save feature names for reference
+# ✅ Save BOTH models (IMPORTANT)
+joblib.dump(rf_model, "rf_model.pkl")
+joblib.dump(lr_model, "lr_model.pkl")
+
+print("  Random Forest saved as rf_model.pkl")
+print("  Logistic Regression saved as lr_model.pkl")
+
+# ✅ Save feature names separately (VERY IMPORTANT)
 feature_names = list(X.columns)
-joblib.dump(feature_names, 'feature_names.pkl')
-print(f"  Feature names saved as feature_names.pkl")
+joblib.dump(feature_names, "feature_names.pkl")
 
-print("\n" + "=" * 60)
-print("   PIPELINE COMPLETE!")
-print("=" * 60)
+print("  Feature names saved as feature_names.pkl")
